@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>JARVIS AI</title>
+<style>
+:root{--bg:#05080d;--panel:#0b121b;--line:#17314a;--c1:#19d3ff;--c2:#2fffe0;--tx:#cfefff;--mut:#6f8da3;--err:#ff5a6e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column;background:radial-gradient(ellipse at 50% 40%,#0a1a2a 0%,var(--bg) 65%)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:12px;letter-spacing:.25em;color:var(--mut)}
+header b{color:var(--c1);letter-spacing:.35em}
+#st{display:flex;align-items:center;gap:8px}
+#dot{width:8px;height:8px;border-radius:50%;background:var(--mut);box-shadow:0 0 8px currentColor}
+main{flex:1;position:relative;min-height:0}
+canvas{width:100%;height:100%;display:block}
+#tx{position:absolute;left:0;right:0;bottom:6px;padding:0 22px;text-align:center;font-size:15px;line-height:1.45;min-height:70px;max-height:34%;overflow:auto}
+#tx .u{color:var(--mut);font-size:13px;margin-bottom:6px}
+#tx .j{color:var(--tx)}
+footer{display:flex;justify-content:center;align-items:center;gap:22px;padding:14px 0 20px}
+.btn{width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--c1);font-size:20px;display:grid;place-items:center;cursor:pointer}
+#mic{width:74px;height:74px;font-size:28px;border-color:var(--c1);box-shadow:0 0 22px #19d3ff44}
+#mic.on{background:var(--c1);color:#001018;box-shadow:0 0 30px #19d3ffaa}
+#set{position:fixed;inset:0;background:#05080dee;backdrop-filter:blur(6px);display:none;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 18px 40px;z-index:5}
+#set.open{display:block}
+#set h2{font-size:13px;letter-spacing:.3em;color:var(--c1);margin:0 0 14px;display:flex;justify-content:space-between;align-items:center}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:11px;letter-spacing:.2em;color:var(--mut);font-weight:600}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:#060d15;color:var(--tx);font-size:15px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px}
+.row input{width:auto;transform:scale(1.3)}
+.act{padding:11px 16px;border-radius:9px;border:1px solid var(--c1);background:transparent;color:var(--c1);font-size:14px;margin-top:12px;margin-right:8px}
+.mem{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.mem button{background:none;border:0;color:var(--err);font-size:18px}
+#msg{font-size:13px;margin-top:10px;min-height:18px}
+.note{font-size:12px;color:var(--mut);line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app">
+ <header><b>JARVIS AI</b><div id="st"><span id="dot"></span><span id="stt">UYKU</span></div></header>
+ <main><canvas id="cv"></canvas><div id="tx"><div class="j">Başlatmak için mikrofon düğmesine dokunun.</div></div></main>
+ <footer>
+  <button class="btn" id="stop" title="Sustur">■</button>
+  <button class="btn" id="mic" title="Mikrofon">🎙</button>
+  <button class="btn" id="cfg" title="Ayarlar">⚙</button>
+ </footer>
+</div>
+
+<div id="set">
+ <h2>KONTROL MERKEZİ <button class="btn" id="close" style="width:40px;height:40px;font-size:16px">✕</button></h2>
+ <div class="card"><h3>YAPAY ZEKÂ SAĞLAYICISI</h3>
+  <label>Sağlayıcı</label>
+  <select id="prov"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="nvidia">NVIDIA</option><option value="custom">Diğer (OpenAI uyumlu)</option></select>
+  <label>Temel adres (base URL)</label><input id="base" autocapitalize="off" autocomplete="off">
+  <label>Model</label><input id="model" autocapitalize="off" autocomplete="off">
+  <label>API anahtarı</label><input id="key" type="password" autocapitalize="off" autocomplete="off" placeholder="Anahtarı yapıştırın">
+  <button class="act" id="save">Kaydet</button><button class="act" id="test">Bağlantıyı test et</button><button class="act" id="delkey" style="border-color:var(--err);color:var(--err)">Anahtarı sil</button>
+  <div id="msg"></div>
+  <p class="note">Anahtar yalnızca bu cihazın tarayıcı deposunda tutulur. Sunucu tarafı anahtar yönetimi için sonraki aşamada bir proxy eklenecek.</p>
+ </div>
+ <div class="card"><h3>SES</h3>
+  <div class="row">Ses efektleri <input type="checkbox" id="sfx"></div>
+  <div class="row">Uyandırma kelimesi (“Jarvis”) <input type="checkbox" id="wake"></div>
+  <label>Konuşma hızı</label><input id="rate" type="range" min="0.7" max="1.3" step="0.05">
+  <label>Ses (cihazın Türkçe sesleri)</label><select id="voice"></select>
+ </div>
+ <div class="card"><h3>HAFIZA</h3><div id="mems"></div><button class="act" id="clr" style="border-color:var(--err);color:var(--err)">Tüm hafızayı sil</button>
+  <p class="note">“Jarvis, hatırla: …” diyerek bilgi kaydedebilirsiniz.</p></div>
+ <div class="card"><h3>DURUM</h3><div class="note" id="info"></div></div>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const PRESETS={gemini:{base:"https://generativelanguage.googleapis.com/v1beta",model:"gemini-2.0-flash"},openai:{base:"https://api.openai.com/v1",model:"gpt-4o-mini"},nvidia:{base:"https://integrate.api.nvidia.com/v1",model:"meta/llama-3.1-70b-instruct"},custom:{base:"",model:""}};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let cfg=Object.assign({prov:"gemini",base:PRESETS.gemini.base,model:PRESETS.gemini.model,key:"",sfx:true,wake:true,rate:1.0,voice:""},store.get("jv_cfg",{}));
+let mem=store.get("jv_mem",[]),hist=store.get("jv_hist",[]);
+let state="sleep",level=0,active=false,rec=null,recOn=false,idleT=null,timers=[];
+
+/* ---------- SES EFEKTLERİ (sentezlenmiş, özgün) ---------- */
+let AC=null,hum=null;
+function ac(){if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(C)AC=new C()}if(AC&&AC.state==="suspended")AC.resume();return AC}
+function tone(f1,f2,d,type,vol,t0){const a=ac();if(!a||!cfg.sfx)return;const t=a.currentTime+(t0||0),o=a.createOscillator(),g=a.createGain();o.type=type||"sine";o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+d);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||0.12,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+0.05)}
+const SFX={
+ boot(){tone(180,900,.9,"sawtooth",.07);tone(400,1600,.7,"sine",.1,.25);tone(1200,1200,.25,"triangle",.08,.8)},
+ power(){tone(300,1200,.5,"sine",.1);tone(600,1800,.4,"triangle",.06,.12)},
+ listen(){tone(700,1100,.12,"sine",.12);tone(1100,1500,.1,"sine",.08,.09)},
+ ack(){tone(900,900,.07,"triangle",.1);tone(1350,1350,.1,"triangle",.1,.08)},
+ speak(){tone(500,800,.14,"sine",.09)},
+ done(){tone(900,500,.2,"sine",.09)},
+ error(){tone(300,200,.25,"square",.07);tone(250,160,.3,"square",.07,.2)},
+ sleep(){tone(900,200,.6,"sine",.09)},
+ off(){tone(1200,100,.9,"sawtooth",.07)},
+ thinkStart(){const a=ac();if(!a||!cfg.sfx||hum)return;const o=a.createOscillator(),l=a.createOscillator(),lg=a.createGain(),g=a.createGain();o.type="sine";o.frequency.value=110;l.frequency.value=6;lg.gain.value=0.02;g.gain.value=0.03;l.connect(lg).connect(g.gain);o.connect(g).connect(a.destination);o.start();l.start();hum={o,l}},
+ thinkStop(){if(hum){try{hum.o.stop();hum.l.stop()}catch(e){}hum=null}}
+};
+
+/* ---------- DURUM ---------- */
+const LBL={sleep:"UYKU",listen:"DİNLİYOR",think:"DÜŞÜNÜYOR",speak:"KONUŞUYOR",error:"HATA"};
+const COL={sleep:"#2a6f8f",listen:"#2fffe0",think:"#ffb347",speak:"#19d3ff",error:"#ff5a6e"};
+function setState(s){if(state===s)return;if(state==="think")SFX.thinkStop();state=s;$("stt").textContent=LBL[s];$("dot").style.color=$("dot").style.background=COL[s];$("mic").classList.toggle("on",active);if(s==="think")SFX.thinkStart()}
+function show(u,j){$("tx").innerHTML=(u?'<div class="u"></div>':"")+'<div class="j"></div>';if(u)$("tx").firstChild.textContent=u;$("tx").lastChild.textContent=j||""}
+
+/* ---------- KONUŞMA (TTS) ---------- */
+let voices=[];
+function loadVoices(){voices=(speechSynthesis.getVoices()||[]).filter(v=>/^tr/i.test(v.lang));const s=$("voice");s.innerHTML="";voices.forEach(v=>{const o=document.createElement("option");o.value=v.name;o.textContent=v.name;s.appendChild(o)});if(!voices.length){const o=document.createElement("option");o.textContent="Türkçe ses bulunamadı";s.appendChild(o)}s.value=cfg.voice||(voices[0]&&voices[0].name)||""}
+if("speechSynthesis" in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function speak(text,after){
+ if(!("speechSynthesis" in window)){show("",text);if(after)after();return}
+ speechSynthesis.cancel();show(lastUser,text);setState("speak");SFX.speak();
+ const parts=text.split(/(?<=[.!?…])\s+/).filter(Boolean);let i=0;
+ const next=()=>{if(i>=parts.length){SFX.done();if(after)after();return}
+  const u=new SpeechSynthesisUtterance(parts[i++]);u.lang="tr-TR";u.rate=+cfg.rate||1;u.pitch=.92;
+  const v=voices.find(x=>x.name===cfg.voice)||voices[0];if(v)u.voice=v;
+  u.onboundary=()=>{level=.9};u.onend=()=>setTimeout(next,160);u.onerror=()=>{if(after)after()};speechSynthesis.speak(u)};
+ next()}
+function silence(){speechSynthesis.cancel();if(state==="speak"){setState(active?"listen":"sleep")}}
+
+/* ---------- DİNLEME (STT) ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let lastUser="";
+function startRec(){
+ if(!SR){show("","Bu tarayıcı ses tanımayı desteklemiyor. Chrome (Android) önerilir.");return false}
+ if(recOn)return true;
+ rec=new SR();rec.lang="tr-TR";rec.continuous=true;rec.interimResults=true;
+ rec.onstart=()=>{recOn=true};
+ rec.onresult=e=>{
+  for(let i=e.resultIndex;i<e.results.length;i++){
+   const r=e.results[i],t=r[0].transcript.trim();if(!t)continue;
+   if(state==="speak"&&t.length>3){silence()}   /* araya girme */
+   if(!r.isFinal){if(active&&state==="listen")show(t,"…");continue}
+   onSpeech(t)}};
+ rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){active=false;stopRec();setState("error");SFX.error();show("","Mikrofon izni verilmedi. Tarayıcı ayarlarından izin verin.")}};
+ rec.onend=()=>{recOn=false;if(cfg.wake||active)setTimeout(()=>{if((cfg.wake||active)&&!recOn)try{startRec()}catch(e){}},400)};
+ try{rec.start();return true}catch(e){return false}}
+function stopRec(){if(rec){rec.onend=null;try{rec.stop()}catch(e){}}recOn=false}
+function onSpeech(t){
+ const n=t.toLocaleLowerCase("tr");
+ if(!active){if(/jarvis|jarvıs|carvis|çarvis/.test(n)){wakeUp();const rest=n.replace(/.*?(jarvis|jarvıs|carvis|çarvis)[,\s]*/,"");if(rest.length>2)handle(rest)}return}
+ if(state==="think")return;
+ handle(n.replace(/^(jarvis|jarvıs)[,\s]*/,""))}
+function wakeUp(){active=true;ac();SFX.listen();setState("listen");$("mic").classList.add("on");show("","Dinliyorum efendim.");resetIdle()}
+function toSleep(msg){active=false;clearTimeout(idleT);SFX.sleep();setState("sleep");$("mic").classList.remove("on");show("",msg||"Uyku modundayım. “Jarvis” demeniz yeterli.");if(!cfg.wake)stopRec()}
+function resetIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{if(state==="listen")toSleep()},45000)}
+
+/* ---------- KOMUTLAR ---------- */
+function say(t,after){hist.push({r:"model",t});store.set("jv_hist",hist.slice(-20));speak(t,()=>{setState(active?"listen":"sleep");resetIdle();if(after)after()})}
+function handle(n){
+ lastUser=n;resetIdle();SFX.ack();
+ hist.push({r:"user",t:n});
+ let m;
+ if(/(uyu|uyku modu|sus artık|kendini kapat)/.test(n)){toSleep("İyi geceler efendim.");return}
+ if(/saat kaç|saati söyle/.test(n)){const d=new Date();return say("Saat "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})+".")}
+ if(/(bugün günlerden|tarih|hangi gün)/.test(n)){return say("Bugün "+new Date().toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+".")}
+ if(/pil|şarj/.test(n)){if(navigator.getBattery)return navigator.getBattery().then(b=>say("Pil yüzde "+Math.round(b.level*100)+(b.charging?", şarj oluyor.":".")));return say("Bu tarayıcı pil bilgisini paylaşmıyor.")}
+ if(/internet|bağlantı durumu/.test(n)&&!/ara/.test(n)){return say(navigator.onLine?"İnternet bağlantınız aktif.":"İnternet bağlantısı yok. Yerel komutlar çalışmaya devam ediyor.")}
+ if(m=n.match(/hatırla[:,]?\s+(.+)/)){mem.push({t:Date.now(),x:m[1]});store.set("jv_mem",mem);renderMem();return say("Kaydettim efendim.")}
+ if(m=n.match(/(\d+)\s*(dakika|dk|saniye|sn)/)){if(/zamanlayıcı|sayaç|say |uyandır|hatırlat/.test(n)){const v=+m[1],ms=v*(/^(dakika|dk)/.test(m[2])?60000:1000);const id=setTimeout(()=>{ac();SFX.power();speak("Efendim, "+v+" "+m[2]+" doldu.",()=>{setState(active?"listen":"sleep")})},ms);timers.push(id);return say(v+" "+m[2]+" için zamanlayıcı başlattım.")}}
+ if(/^(müzik|youtube)/.test(n)||/müzik aç/.test(n)){window.open("https://music.youtube.com","_blank");return say("Müzik uygulamasını açıyorum.")}
+ if(!cfg.key){return say("Bunun için bir yapay zekâ anahtarına ihtiyacım var. Ayarlardan ekleyebilirsiniz.")}
+ askAI(n)}
+
+/* ---------- YAPAY ZEKÂ ---------- */
+function sysPrompt(){return "Sen JARVIS’sin: zeki, ciddi, gerektiğinde ince esprili bir kişisel asistan. Türkçe konuş, kullanıcıya zaman zaman “efendim” de. Cevapların kısa olsun (en fazla 2-3 cümle), sesli okunacak; liste, markdown, emoji kullanma. Gereksiz soru sorma. "+(mem.length?"Kullanıcı hakkında bildiklerin: "+mem.map(m=>m.x).join("; ")+".":"")}
+async function callAI(msgs,signal){
+ if(cfg.prov==="gemini"){
+  const body={systemInstruction:{parts:[{text:sysPrompt()}]},contents:msgs.map(m=>({role:m.r==="user"?"user":"model",parts:[{text:m.t}]}))};
+  const r=await fetch(cfg.base.replace(/\/$/,"")+"/models/"+encodeURIComponent(cfg.model)+":generateContent?key="+encodeURIComponent(cfg.key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal});
+  const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||("HTTP "+r.status));
+  return j.candidates[0].content.parts.map(p=>p.text).join("")}
+ const body={model:cfg.model,messages:[{role:"system",content:sysPrompt()}].concat(msgs.map(m=>({role:m.r==="user"?"user":"assistant",content:m.t}))),max_tokens:300};
+ const r=await fetch(cfg.base.replace(/\/$/,"")+"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.key},body:JSON.stringify(body),signal});
+ const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||("HTTP "+r.status));
+ return j.choices[0].message.content}
+async function askAI(n){
+ setState("think");show(n,"…");
+ const c=new AbortController(),to=setTimeout(()=>c.abort(),20000);
+ try{const out=(await callAI(hist.slice(-8),c.signal)).trim();clearTimeout(to);say(out)}
+ catch(e){clearTimeout(to);SFX.error();hist.pop();const off=!navigator.onLine;
+  say(off?"İnternet bağlantısı yok efendim. Yerel komutları kullanabilirsiniz.":"Yapay zekâya ulaşamadım: "+String(e.message).slice(0,90))}}
+
+/* ---------- AYARLAR ---------- */
+function fillCfg(){$("prov").value=cfg.prov;$("base").value=cfg.base;$("model").value=cfg.model;$("key").value=cfg.key;$("sfx").checked=cfg.sfx;$("wake").checked=cfg.wake;$("rate").value=cfg.rate;info()}
+function info(){$("info").textContent="Bağlantı: "+(navigator.onLine?"çevrimiçi":"çevrimdışı")+" · Ses tanıma: "+(SR?"destekleniyor":"yok")+" · Ses sentezi: "+(("speechSynthesis" in window)?"destekleniyor":"yok")+" · Anahtar: "+(cfg.key?"kayıtlı":"yok")}
+function msg(t,ok){const m=$("msg");m.textContent=t;m.style.color=ok?"var(--c2)":"var(--err)"}
+function renderMem(){const w=$("mems");w.innerHTML="";if(!mem.length){w.innerHTML='<div class="note">Henüz kayıt yok.</div>';return}mem.forEach((m,i)=>{const d=document.createElement("div");d.className="mem";const s=document.createElement("span");s.textContent=m.x;const b=document.createElement("button");b.textContent="✕";b.onclick=()=>{mem.splice(i,1);store.set("jv_mem",mem);renderMem()};d.append(s,b);w.appendChild(d)})}
+function saveCfg(){cfg.prov=$("prov").value;cfg.base=$("base").value.trim();cfg.model=$("model").value.trim();cfg.key=$("key").value.trim();cfg.sfx=$("sfx").checked;cfg.wake=$("wake").checked;cfg.rate=+$("rate").value;cfg.voice=$("voice").value;store.set("jv_cfg",cfg);info()}
+$("prov").onchange=()=>{const p=PRESETS[$("prov").value];$("base").value=p.base;$("model").value=p.model};
+$("save").onclick=()=>{saveCfg();msg("Kaydedildi.",true);if(cfg.wake&&!recOn&&active)startRec()};
+$("delkey").onclick=()=>{cfg.key="";$("key").value="";store.set("jv_cfg",cfg);info();msg("Anahtar silindi.",true)};
+$("test").onclick=async()=>{saveCfg();if(!cfg.key)return msg("Önce anahtar girin.");msg("Test ediliyor…",true);
+ try{const c=new AbortController();setTimeout(()=>c.abort(),15000);const o=await callAI([{r:"user",t:"Sadece “hazır” de."}],c.signal);msg("Bağlantı başarılı: "+o.slice(0,40),true)}catch(e){msg("Başarısız: "+String(e.message).slice(0,120))}};
+$("clr").onclick=()=>{mem=[];hist=[];store.set("jv_mem",mem);store.set("jv_hist",hist);renderMem()};
+$("cfg").onclick=()=>{fillCfg();renderMem();$("set").classList.add("open")};
+$("close").onclick=()=>{saveCfg();$("set").classList.remove("open")};
+$("stop").onclick=()=>{silence();timers.forEach(clearTimeout);timers=[]};
+$("mic").onclick=()=>{ac();
+ if(active&&state!=="sleep"){if(state==="speak")return silence();toSleep();return}
+ SFX.boot();if(!startRec())return;wakeUp()};
+addEventListener("online",info);addEventListener("offline",info);
+window.onerror=()=>{try{SFX.error()}catch(e){}};
+document.addEventListener("visibilitychange",()=>{if(document.hidden){silence()}});
+
+/* ---------- ÇEKİRDEK ANİMASYONU ---------- */
+const cv=$("cv"),cx=cv.getContext("2d");let W=0,H=0,DPR=Math.min(devicePixelRatio||1,2),t0=0;
+function resize(){const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener("resize",resize);resize();
+function frame(ts){
+ requestAnimationFrame(frame);if(document.hidden)return;
+ if(ts-t0<28)return;t0=ts;const t=ts/1000;
+ const target=state==="speak"?.5+.5*Math.abs(Math.sin(t*9)*Math.sin(t*3.7)):state==="listen"?.25+.15*Math.sin(t*4):state==="think"?.35:.08;
+ level+=(target-level)*.18;
+ const col=COL[state],R=Math.min(W,H)*.2,x=W/2,y=H*.42;
+ cx.clearRect(0,0,W,H);
+ const g=cx.createRadialGradient(x,y,0,x,y,R*(1.6+level));g.addColorStop(0,col+"cc");g.addColorStop(.35,col+"33");g.addColorStop(1,"#0000");
+ cx.fillStyle=g;cx.beginPath();cx.arc(x,y,R*(1.6+level),0,7);cx.fill();
+ cx.strokeStyle=col;cx.lineCap="round";
+ const sp=state==="think"?3:state==="sleep"?.25:1;
+ for(let i=0;i<4;i++){const rr=R*(1.15+i*.28),a=t*sp*(i%2?-1:1)*(.5+i*.3);cx.globalAlpha=.9-i*.17;cx.lineWidth=i===1?3:1.5;
+  cx.setLineDash(i===0?[R*.5,R*.2]:i===1?[R*1.4,R*.3,R*.2,R*.3]:i===2?[4,10]:[R*.9,R*.5]);cx.lineDashOffset=-a*rr*.5;cx.beginPath();cx.arc(x,y,rr,a,a+6.2832);cx.stroke()}
+ cx.setLineDash([]);cx.globalAlpha=1;
+ const bars=48,rr=R*1.15+R*1.12*.0+R*.0;cx.lineWidth=2;cx.globalAlpha=.8;
+ for(let i=0;i<bars;i++){const a=i/bars*6.2832-1.5708,v=(Math.sin(t*3+i*.7)*.5+.5)*(Math.sin(t*1.3+i*.3)*.5+.5),h=4+v*level*R*.9;const r1=R*.92;cx.beginPath();cx.moveTo(x+Math.cos(a)*r1,y+Math.sin(a)*r1);cx.lineTo(x+Math.cos(a)*(r1-h*.6),y+Math.sin(a)*(r1-h*.6));cx.stroke()}
+ cx.globalAlpha=1;cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=24*(.5+level);cx.beginPath();cx.arc(x,y,R*(.34+level*.12),0,7);cx.fill();cx.shadowBlur=0;
+ cx.fillStyle="#001018";cx.beginPath();cx.arc(x,y,R*.16,0,7);cx.fill()}
+requestAnimationFrame(frame);
+setState("sleep");fillCfg();renderMem();if(!SR)show("","Ses tanıma için Android’de Chrome kullanın. Yazılı ayarlar ve yerel komutlar yine de çalışır.");
+</script>
+</body>
+</html>
